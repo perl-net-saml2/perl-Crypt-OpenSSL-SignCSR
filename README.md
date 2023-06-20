@@ -40,16 +40,18 @@ Crypt::OpenSSL::PKCS10 allows you to generate a Certificate Signing Request (CSR
 
 Timothy Legge, <timlegge@cpan.org>
 
-# COPYRIGHT AND LICENSE
+# COPYRIGHT
 
 Copyright (C) 2023 by Timothy Legge
 Copyright 1995-2022 The OpenSSL Project Authors. All Rights Reserved.
+
+I did not write any OpenSSL related code I simply copied and pasted
+the work of the OpenSSL project's openssl code until I arrived at a XS
+based module that could create a certificate from a Certificate Signing Request.
+
+&#x3d; head LICENSE
 
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy
 in the file LICENSE in the source distribution or at
 https://www.openssl.org/source/license.html
-
-I did not write any OpenSSL related code I simply copied and pasted
-the work of the OpenSSL project's openssl code until I arrived at a XS
-based module that could create a certificate from a Certificate Signing Request.

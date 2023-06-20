@@ -74,10 +74,12 @@ my %WriteMakefileArgs = (
   "NAME" => "Crypt::OpenSSL::SignCSR",
   "PREREQ_PM" => {},
   "TEST_REQUIRES" => {
+    "Crypt::OpenSSL::PKCS10" => "0.19",
+    "Crypt::OpenSSL::RSA" => 0,
     "File::Slurper" => "0.012",
-    "Test::Exception" => 0
+    "File::Which" => 0
   },
-  "VERSION" => "0.02",
+  "VERSION" => "0.03",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -89,8 +91,10 @@ my %WriteMakefileArgs = (
 );
 
 my %FallbackPrereqs = (
+  "Crypt::OpenSSL::PKCS10" => "0.19",
+  "Crypt::OpenSSL::RSA" => 0,
   "File::Slurper" => "0.012",
-  "Test::Exception" => 0
+  "File::Which" => 0
 );
 
 unless ( eval { ExtUtils::MakeMaker->VERSION('6.63_03') } ) {

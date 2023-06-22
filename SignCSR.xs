@@ -20,6 +20,7 @@
 #include <openssl/x509_vfy.h>
 #include <openssl/safestack.h>
 #include <openssl/pkcs12.h>
+#include <openssl/bn.h>
 
 # define OPT_FMT_PEM             (1L <<  1)
 # define CHECK_OPEN_SSL(p_result) if (!(p_result)) croakSsl(__FILE__, __LINE__);

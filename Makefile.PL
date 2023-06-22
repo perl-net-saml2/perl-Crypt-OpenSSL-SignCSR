@@ -10,9 +10,11 @@ use ExtUtils::MakeMaker;
 
 use Config;
 use File::Spec;
-
+use Crypt::OpenSSL::Guess;
 my %args;
 
+my ($major, $minor, $patch) = openssl_version();
+print "Installed OpenSSL: $major.$minor.$patch\n";
 if ($^O ne 'MSWin32' and my $prefix = `brew --prefix --installed openssl\@1.1 2>@{[File::Spec->devnull]}`) {
   chomp $prefix;
   $args{INC} = "-I$prefix/include";
@@ -32,7 +34,7 @@ if ($^O eq 'MSWin32') {
   }
 }
 
-my $cc_option_flags = ' -DOPENSSL_API_COMPAT=0x10100000L';
+my $cc_option_flags = $major ge 3 ? ' -DOPENSSL_API_COMPAT=30000' : ' -DOPENSSL_API_COMPAT=10100';
 
 if ($Config::Config{cc} =~ /gcc/i) {
   $cc_option_flags .= $ENV{AUTHOR_TESTING} ? ' -Wall -Werror' : ' -Wall';
@@ -79,7 +81,7 @@ my %WriteMakefileArgs = (
     "File::Slurper" => "0.012",
     "File::Which" => 0
   },
-  "VERSION" => "0.03",
+  "VERSION" => "0.04",
   "test" => {
     "TESTS" => "t/*.t"
   }

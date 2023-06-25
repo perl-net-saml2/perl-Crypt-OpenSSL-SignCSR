@@ -1,13 +1,13 @@
 # ABSTRACT OpenSSL Self Sign a Certificate Signing Request in XS.
 package Crypt::OpenSSL::SignCSR;
 
-use 5.036001;
+use 5.014;
 use strict;
 use warnings;
 
 require Exporter;
 
-our $VERSION  = "0.03";
+our $VERSION  = "0.04";
 
 our @ISA = qw(Exporter);
 

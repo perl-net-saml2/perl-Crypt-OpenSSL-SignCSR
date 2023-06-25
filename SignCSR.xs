@@ -31,7 +31,9 @@
 # define SERIAL_RAND_BITS 159
 
 BIO *bio_err;
+#if OPENSSL_API_COMPAT >= 30000
 OSSL_LIB_CTX *libctx = NULL;
+#endif
 static const char *propq = NULL;
 static unsigned long nmflag = 0;
 static char nmflag_set = 0;
@@ -165,7 +167,11 @@ int do_X509_REQ_verify(X509_REQ *x, EVP_PKEY *pkey, STACK_OF(OPENSSL_STRING) *vf
     int rv = 0;
 
     if (do_x509_req_init(x, vfyopts) > 0){
+#if OPENSSL_API_COMPAT <= 10100
+        rv = X509_REQ_verify(x, pkey);
+#else
         rv = X509_REQ_verify_ex(x, pkey, libctx, propq);
+#endif
     }
     else
         rv = -1;
@@ -242,10 +248,18 @@ unsigned long get_nameopt(void)
         nmflag_set ? nmflag : XN_FLAG_SEP_CPLUS_SPC | ASN1_STRFLGS_UTF8_CONVERT;
 }
 
+#if OPENSSL_API_COMPAT >= 30000
 static int do_sign_init(EVP_MD_CTX *ctx, EVP_PKEY *pkey, const char *md, STACK_OF(OPENSSL_STRING) *sigopts)
+#else
+static int do_sign_init(EVP_MD_CTX *ctx, EVP_PKEY *pkey, const EVP_MD *md, STACK_OF(OPENSSL_STRING) *sigopts)
+#endif
 {
     EVP_PKEY_CTX *pkctx = NULL;
+#if OPENSSL_API_COMPAT >= 30000
     char def_md[80];
+#else
+    int def_nid;
+#endif
 
     if (ctx == NULL)
         return 0;
@@ -253,14 +267,23 @@ static int do_sign_init(EVP_MD_CTX *ctx, EVP_PKEY *pkey, const char *md, STACK_O
      * EVP_PKEY_get_default_digest_name() returns 2 if the digest is mandatory
      * for this algorithm.
      */
+#if OPENSSL_API_COMPAT >= 30000
     if (EVP_PKEY_get_default_digest_name(pkey, def_md, sizeof(def_md)) == 2
             && strcmp(def_md, "UNDEF") == 0) {
+#else
+    if (EVP_PKEY_get_default_digest_nid(pkey, &def_nid) == 2
+        && def_nid == NID_undef) {
+#endif
         /* The signing algorithm requires there to be no digest */
         md = NULL;
     }
 
+#if OPENSSL_API_COMPAT >= 30000
     int val = EVP_DigestSignInit_ex(ctx, &pkctx, md, libctx,
                                  propq, pkey, NULL);
+#else
+    int val = EVP_DigestSignInit(ctx, &pkctx, md, NULL, pkey);
+#endif
     return val
         && do_pkey_ctx_init(pkctx, sigopts);
 }
@@ -412,7 +435,11 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
 
         // Create a new certificate store
         X509 * x;
+#if OPENSSL_API_COMPAT <= 10100
+        if ((x = X509_new()) == NULL)
+#else
         if ((x = X509_new_ex(libctx, propq)) == NULL)
+#endif
             croak("X509_new_ex failed ...\n");
 
         // FIXME need to look at this
@@ -460,18 +487,30 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
 
         // Create the X509 v3 extensions for the certificate
         X509V3_CTX ext_ctx;
-        X509V3_set_ctx(&ext_ctx, issuer_cert, x, csr /*NULL*/, NULL, X509V3_CTX_REPLACE);
 
         // Set the certificate issuer from the private key
+#if OPENSSL_API_COMPAT >= 30000
+        X509V3_set_ctx(&ext_ctx, issuer_cert, x, NULL, NULL, X509V3_CTX_REPLACE);
         if (!X509V3_set_issuer_pkey(&ext_ctx, private_key))
             croak("X509V3_set_issuer_pkey cannot set issuer private key\n");
+#else
+        X509V3_set_ctx(&ext_ctx, issuer_cert, x, csr, NULL, X509V3_CTX_REPLACE);
+#endif
 
         // Set the X509 version of the certificate
+#if OPENSSL_API_COMPAT >= 30000
         if (!X509_set_version(x, X509_VERSION_3))
+#else
+        if (!X509_set_version(x, 2))
+#endif
             croak("X509_set_version cannot set version 3\n");
 
         // Get digestname parameter - verify that it is valid
+#if OPENSSL_API_COMPAT >= 30300
+        const EVP_MD *dgst;
+#else
         EVP_MD * md;
+#endif
         digestname = (unsigned char*) SvPV(name_SV, digestname_length);
         md = (EVP_MD *)EVP_get_digestbyname(digestname);
         if (md != NULL)
@@ -483,7 +522,11 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
         mctx = EVP_MD_CTX_new();
 
         // Sign the new certificate
+#if OPENSSL_API_COMPAT >= 30000
         if (mctx != NULL && do_sign_init(mctx, private_key, digestname, NULL /*sigopts*/) > 0)
+#else
+        if (mctx != NULL && do_sign_init(mctx, private_key, md, NULL /*sigopts*/) > 0)
+#endif
             rv = (X509_sign_ctx(x, mctx) > 0);
 
         if (rv == 0)

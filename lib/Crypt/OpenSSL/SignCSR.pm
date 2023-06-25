@@ -1,7 +1,7 @@
 # ABSTRACT OpenSSL Self Sign a Certificate Signing Request in XS.
 package Crypt::OpenSSL::SignCSR;
 
-use 5.008;
+use 5.014;
 use strict;
 use warnings;
 

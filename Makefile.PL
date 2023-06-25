@@ -5,7 +5,7 @@
 use strict;
 use warnings;
 
-use 5.008;
+use 5.014;
 use ExtUtils::MakeMaker;
 
 use Config;
@@ -72,7 +72,7 @@ my %WriteMakefileArgs = (
   },
   "DISTNAME" => "Crypt-OpenSSL-SignCSR",
   "LICENSE" => "apache",
-  "MIN_PERL_VERSION" => "5.008",
+  "MIN_PERL_VERSION" => "5.014",
   "NAME" => "Crypt::OpenSSL::SignCSR",
   "PREREQ_PM" => {},
   "TEST_REQUIRES" => {

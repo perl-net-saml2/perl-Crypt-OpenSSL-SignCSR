@@ -31,10 +31,10 @@
 # define SERIAL_RAND_BITS 159
 
 BIO *bio_err;
-#if OPENSSL_API_COMPAT >= 30000
+#if OPENSSL_API_COMPAT >= 30101
 OSSL_LIB_CTX *libctx = NULL;
-#endif
 static const char *propq = NULL;
+#endif
 static unsigned long nmflag = 0;
 static char nmflag_set = 0;
 
@@ -77,14 +77,22 @@ int set_cert_times(X509 *x, const char *startdate, const char *enddate,
         if (X509_gmtime_adj(X509_getm_notBefore(x), 0) == NULL)
             return 0;
     } else {
+#if OPENSSL_API_COMPAT >= 10101
         if (!ASN1_TIME_set_string_X509(X509_getm_notBefore(x), startdate))
+#else        
+        if (!ASN1_TIME_set_string(X509_getm_notBefore(x), startdate))
+#endif
             return 0;
     }
     if (enddate == NULL) {
         if (X509_time_adj_ex(X509_getm_notAfter(x), days, 0, NULL)
             == NULL)
             return 0;
+#if OPENSSL_API_COMPAT >= 10100
     } else if (!ASN1_TIME_set_string_X509(X509_getm_notAfter(x), enddate)) {
+#else        
+    } else if (!ASN1_TIME_set_string(X509_getm_notAfter(x), enddate)) {
+#endif
         return 0;
     }
     return 1;
@@ -139,21 +147,21 @@ int cert_matches_key(const X509 *cert, const EVP_PKEY *pkey)
 
 static int do_x509_req_init(X509_REQ *x, STACK_OF(OPENSSL_STRING) *opts)
 {
-    int i;
+    //int i;
 
     opts = NULL;
     if (opts == NULL)
         return 1;
 
-    for (i = 0; i < sk_OPENSSL_STRING_num(opts); i++) {
-        char *opt = sk_OPENSSL_STRING_value(opts, i);
+    //for (i = 0; i < sk_OPENSSL_STRING_num(opts); i++) {
+    //    char *opt = sk_OPENSSL_STRING_value(opts, i);
 
-        //if (x509_req_ctrl_string(x, opt) <= 0) {
-        //   croak("parameter error "); //$, n", opt);
-        //   ERR_print_errors(bio_err);
-        //    return 0;
-        //}
-    }
+    //    if (x509_req_ctrl_string(x, opt) <= 0) {
+    //        croak("parameter error "); //$, n", opt);
+    //        ERR_print_errors(bio_err);
+    //        return 0;
+    //    }
+    //}
 
     return 1;
 }
@@ -167,10 +175,10 @@ int do_X509_REQ_verify(X509_REQ *x, EVP_PKEY *pkey, STACK_OF(OPENSSL_STRING) *vf
     int rv = 0;
 
     if (do_x509_req_init(x, vfyopts) > 0){
-#if OPENSSL_API_COMPAT <= 10100
-        rv = X509_REQ_verify(x, pkey);
-#else
+#if OPENSSL_API_COMPAT >= 30101
         rv = X509_REQ_verify_ex(x, pkey, libctx, propq);
+#else
+        rv = X509_REQ_verify(x, pkey);
 #endif
     }
     else
@@ -248,14 +256,14 @@ unsigned long get_nameopt(void)
         nmflag_set ? nmflag : XN_FLAG_SEP_CPLUS_SPC | ASN1_STRFLGS_UTF8_CONVERT;
 }
 
-#if OPENSSL_API_COMPAT >= 30000
+#if OPENSSL_API_COMPAT >= 30101
 static int do_sign_init(EVP_MD_CTX *ctx, EVP_PKEY *pkey, const char *md, STACK_OF(OPENSSL_STRING) *sigopts)
 #else
 static int do_sign_init(EVP_MD_CTX *ctx, EVP_PKEY *pkey, const EVP_MD *md, STACK_OF(OPENSSL_STRING) *sigopts)
 #endif
 {
     EVP_PKEY_CTX *pkctx = NULL;
-#if OPENSSL_API_COMPAT >= 30000
+#if OPENSSL_API_COMPAT >= 30101
     char def_md[80];
 #else
     int def_nid;
@@ -267,7 +275,7 @@ static int do_sign_init(EVP_MD_CTX *ctx, EVP_PKEY *pkey, const EVP_MD *md, STACK
      * EVP_PKEY_get_default_digest_name() returns 2 if the digest is mandatory
      * for this algorithm.
      */
-#if OPENSSL_API_COMPAT >= 30000
+#if OPENSSL_API_COMPAT >= 30101
     if (EVP_PKEY_get_default_digest_name(pkey, def_md, sizeof(def_md)) == 2
             && strcmp(def_md, "UNDEF") == 0) {
 #else
@@ -278,7 +286,7 @@ static int do_sign_init(EVP_MD_CTX *ctx, EVP_PKEY *pkey, const EVP_MD *md, STACK
         md = NULL;
     }
 
-#if OPENSSL_API_COMPAT >= 30000
+#if OPENSSL_API_COMPAT >= 30101
     int val = EVP_DigestSignInit_ex(ctx, &pkctx, md, libctx,
                                  propq, pkey, NULL);
 #else
@@ -371,10 +379,8 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
     IV text;
 
     PREINIT:
-        char * req;
-        char *name;
         EVP_MD_CTX *mctx;
-        STACK_OF(OPENSSL_STRING) *sigopts;
+        STACK_OF(OPENSSL_STRING) *sigopts = NULL;
 
     CODE:
 
@@ -387,7 +393,6 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
         unsigned char* request;
         //BIO *bio;
         BIO *csrbio;
-        BIO *finbio;
         char * digestname;
         STRLEN digestname_length;
 
@@ -435,10 +440,10 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
 
         // Create a new certificate store
         X509 * x;
-#if OPENSSL_API_COMPAT <= 10100
-        if ((x = X509_new()) == NULL)
-#else
+#if OPENSSL_API_COMPAT >= 30101
         if ((x = X509_new_ex(libctx, propq)) == NULL)
+#else
+        if ((x = X509_new()) == NULL)
 #endif
             croak("X509_new_ex failed ...\n");
 
@@ -456,13 +461,13 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
             croak("X509_set_pubkey cannot set public key\n");
 
         // FIXME need to look at this
-        for (int i = X509_get_ext_count(x) - 1; i >= 0; i--) {
-            X509_EXTENSION *ex = X509_get_ext(x, i);
-            const char *sn = OBJ_nid2sn(OBJ_obj2nid(X509_EXTENSION_get_object(ex)));
+        //for (int i = X509_get_ext_count(x) - 1; i >= 0; i--) {
+        //    X509_EXTENSION *ex = X509_get_ext(x, i);
+        //    const char *sn = OBJ_nid2sn(OBJ_obj2nid(X509_EXTENSION_get_object(ex)));
 
-            //if (clrext || (ext_names != NULL && strstr(ext_names, sn) == NULL))
-            //    X509_EXTENSION_free(X509_delete_ext(x, i));
-        }
+        //    if (clrext || (ext_names != NULL && strstr(ext_names, sn) == NULL))
+        //        X509_EXTENSION_free(X509_delete_ext(x, i));
+        //}
 
         // FIXME - this may need to change to support signing by different certificates
         if (private_key != NULL && !cert_matches_key(x, private_key))
@@ -506,7 +511,7 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
             croak("X509_set_version cannot set version 3\n");
 
         // Get digestname parameter - verify that it is valid
-#if OPENSSL_API_COMPAT >= 30300
+#if OPENSSL_API_COMPAT >= 30101
         const EVP_MD *dgst;
 #else
         EVP_MD * md;
@@ -522,10 +527,10 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
         mctx = EVP_MD_CTX_new();
 
         // Sign the new certificate
-#if OPENSSL_API_COMPAT >= 30000
-        if (mctx != NULL && do_sign_init(mctx, private_key, digestname, NULL /*sigopts*/) > 0)
+#if OPENSSL_API_COMPAT >= 30101
+        if (mctx != NULL && do_sign_init(mctx, private_key, digestname, sigopts) > 0)
 #else
-        if (mctx != NULL && do_sign_init(mctx, private_key, md, NULL /*sigopts*/) > 0)
+        if (mctx != NULL && do_sign_init(mctx, private_key, md, sigopts) > 0)
 #endif
             rv = (X509_sign_ctx(x, mctx) > 0);
 

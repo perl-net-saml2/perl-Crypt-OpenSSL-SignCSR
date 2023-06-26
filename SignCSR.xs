@@ -33,8 +33,8 @@
 BIO *bio_err;
 #if OPENSSL_API_COMPAT >= 30101
 OSSL_LIB_CTX *libctx = NULL;
-#endif
 static const char *propq = NULL;
+#endif
 static unsigned long nmflag = 0;
 static char nmflag_set = 0;
 
@@ -77,7 +77,7 @@ int set_cert_times(X509 *x, const char *startdate, const char *enddate,
         if (X509_gmtime_adj(X509_getm_notBefore(x), 0) == NULL)
             return 0;
     } else {
-#if OPENSSL_API_COMPAT >= 10100
+#if OPENSSL_API_COMPAT >= 10101
         if (!ASN1_TIME_set_string_X509(X509_getm_notBefore(x), startdate))
 #else        
         if (!ASN1_TIME_set_string(X509_getm_notBefore(x), startdate))
@@ -147,21 +147,21 @@ int cert_matches_key(const X509 *cert, const EVP_PKEY *pkey)
 
 static int do_x509_req_init(X509_REQ *x, STACK_OF(OPENSSL_STRING) *opts)
 {
-    int i;
+    //int i;
 
     opts = NULL;
     if (opts == NULL)
         return 1;
 
-    for (i = 0; i < sk_OPENSSL_STRING_num(opts); i++) {
-        char *opt = sk_OPENSSL_STRING_value(opts, i);
+    //for (i = 0; i < sk_OPENSSL_STRING_num(opts); i++) {
+    //    char *opt = sk_OPENSSL_STRING_value(opts, i);
 
-        //if (x509_req_ctrl_string(x, opt) <= 0) {
-        //   croak("parameter error "); //$, n", opt);
-        //   ERR_print_errors(bio_err);
-        //    return 0;
-        //}
-    }
+    //    if (x509_req_ctrl_string(x, opt) <= 0) {
+    //        croak("parameter error "); //$, n", opt);
+    //        ERR_print_errors(bio_err);
+    //        return 0;
+    //    }
+    //}
 
     return 1;
 }
@@ -379,10 +379,8 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
     IV text;
 
     PREINIT:
-        char * req;
-        char *name;
         EVP_MD_CTX *mctx;
-        STACK_OF(OPENSSL_STRING) *sigopts;
+        STACK_OF(OPENSSL_STRING) *sigopts = NULL;
 
     CODE:
 
@@ -395,7 +393,6 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
         unsigned char* request;
         //BIO *bio;
         BIO *csrbio;
-        BIO *finbio;
         char * digestname;
         STRLEN digestname_length;
 
@@ -464,13 +461,13 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
             croak("X509_set_pubkey cannot set public key\n");
 
         // FIXME need to look at this
-        for (int i = X509_get_ext_count(x) - 1; i >= 0; i--) {
-            X509_EXTENSION *ex = X509_get_ext(x, i);
-            const char *sn = OBJ_nid2sn(OBJ_obj2nid(X509_EXTENSION_get_object(ex)));
+        //for (int i = X509_get_ext_count(x) - 1; i >= 0; i--) {
+        //    X509_EXTENSION *ex = X509_get_ext(x, i);
+        //    const char *sn = OBJ_nid2sn(OBJ_obj2nid(X509_EXTENSION_get_object(ex)));
 
-            //if (clrext || (ext_names != NULL && strstr(ext_names, sn) == NULL))
-            //    X509_EXTENSION_free(X509_delete_ext(x, i));
-        }
+        //    if (clrext || (ext_names != NULL && strstr(ext_names, sn) == NULL))
+        //        X509_EXTENSION_free(X509_delete_ext(x, i));
+        //}
 
         // FIXME - this may need to change to support signing by different certificates
         if (private_key != NULL && !cert_matches_key(x, private_key))
@@ -531,9 +528,9 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
 
         // Sign the new certificate
 #if OPENSSL_API_COMPAT >= 30101
-        if (mctx != NULL && do_sign_init(mctx, private_key, digestname, NULL /*sigopts*/) > 0)
+        if (mctx != NULL && do_sign_init(mctx, private_key, digestname, sigopts) > 0)
 #else
-        if (mctx != NULL && do_sign_init(mctx, private_key, md, NULL /*sigopts*/) > 0)
+        if (mctx != NULL && do_sign_init(mctx, private_key, md, sigopts) > 0)
 #endif
             rv = (X509_sign_ctx(x, mctx) > 0);
 

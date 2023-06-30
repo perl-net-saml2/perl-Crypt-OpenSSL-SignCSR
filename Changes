@@ -2,6 +2,20 @@ Revision history for Crypt-OpenSSL-SignCSR.
 
 {{$NEXT}}
 
+0.05 -- Fri Jun 30 17:26:04 ADT 2023
+
+    [Significant Changes since 0.04]
+
+    Breaking Changes: The sign() function now only accepts the
+    Certificate Signing Request (CSR).  The other options have
+    been moved to the constructor and functions are provided to
+    update and obtain the values if required.
+
+    - e7421ed Remove the unsupported macos 10.15 github action
+    - 5996f1a Redesign of the interface and constructor
+    - 642250e Add Crypt::OpenSSL::Guess as a dependency
+    - f2e7378 Some additional OpenSSL change for version differences
+
 0.04 -- Sun Jun 25 14:52:41 ADT 2023
 
     - Address issues compiling against older openssl versions

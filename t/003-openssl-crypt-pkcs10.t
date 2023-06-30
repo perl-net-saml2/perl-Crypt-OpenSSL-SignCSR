@@ -61,11 +61,18 @@ $req->sign();
 my $request = $req->get_pem_req();
 
 like ($request, qr/CERTIFICATE REQUEST/, "Sucessfully created a Certificate Request");
-my $signer = Crypt::OpenSSL::SignCSR->new($privkey);
+my $signer = Crypt::OpenSSL::SignCSR->new(
+                                            $privkey,
+                                            {
+                                                format  => "pem",
+                                                days    => 760,
+                                                digest  => "SHA512",
+                                            }
+                                        );
 
 isa_ok($signer, "Crypt::OpenSSL::SignCSR");
 
-my $cert = $signer->sign($request, 10, 'SHA512', 0, '');
+my $cert = $signer->sign($request, '');
 
 my $certfile = tempfile();
 my ($certfh, $certfilename) = tempfile();

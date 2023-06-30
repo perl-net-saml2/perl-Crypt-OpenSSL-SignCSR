@@ -35,25 +35,94 @@ Crypt::OpenSSL::SignCSR - Sign a Certificate Signing Request in XS.
 
   use Crypt::OpenSSL::SignCSR;
 
-  my $signer = Crypt::OpenSSL::SignCSR->new($private_key_pem);
+  my $signer = Crypt::OpenSSL::SignCSR->new(
+                                $private_key_pem
+                                {   # OPTIONAL
+                                    days    => $days,   # Number of days for the certificate
+                                    digest  => $digest, # Signature digest default (SHA256)
+                                    format  => $format, # Output format "text" or "pem" (default)
+                                });
   my $cert   = $signer->sign(
                                 $request, # CRS in PEM format
-                                $days,      # number of days for the certificate
-                                $digest     # Signature digest default (SHAi256)
-                                $text,      # Boolean (text format output (1) PEM (0)
-                                ''          # FIXME
                             );
+
+  my $ret = $signer->set_days(3650);
+  my $ret = $signer->set_format("text");
+  my $ret = $signer->set_days("SHA512");
+
+  $cert   = $signer->sign( $request ); # CRS in PEM format
 
 =head1 DESCRIPTION
 
 Allows a Certificate Signing Request (CSR) to be signed to create a
 X509 PEM encoded Certificate.
 
-WARNING: Early release.
+=head1 METHODS
 
-I am almost certainly going to change the way the module is initialized.
-The Key being kept in memory is probably not the best approach.  It will be
-moved to the sign sub-routine.
+=head2 sign($csr)
+
+Sign the provided CSR in PEM format.
+
+Returns a signed certificate file in the specified format.
+
+Arguments:
+
+ * $csr - a PEM format Certificate signing request.  You can create one with
+ Crypt::OpenSSL::PKCS10 or any other product capable of creating a signing request.
+
+=head2 set_digest($digest)
+
+Set the digest that should be used for signing the certificate.
+
+Any openssl supported digest can be specified.  If the value provided is not
+a valid it will set the openssl default.
+
+Returns true (1) if successful and false (0) for a failure.
+
+Arguments:
+
+ * $digest - the specified openssl supported digest (ex SHA1, SHA256, SHA384, SHA512)
+
+=head2 get_digest()
+
+Get the digest that is currently set.
+
+Returns a string
+
+=head2 set_format($format)
+
+Set the format that should be used to output the the certificate.
+
+Supported formats are "text" and "pem" (default).
+
+Returns true (1) if successful and false (0) for a failure.
+
+Arguments:
+
+ * $format - the specified output format ("pem", "text")
+
+=head2 get_format()
+
+Get the output format that is currently set.
+
+Returns a string
+
+=head2 set_days($days)
+
+Set the number of days that the Certificate will be valid.  The days can
+be set via the constructor or modified via set_days()
+
+Returns true (1) if successful and false (0) for a failure.
+
+Arguments:
+
+ * $days - number of days that the certificate will be valid.
+
+=head2 get_days()
+
+Get the number of days that is currently set.
+
+Returns a number
 
 =head1 EXPORT
 

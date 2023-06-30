@@ -39,7 +39,14 @@ N3nGJfwRq+92jboNoqrhMxmMXFkPRIfpTBCIno6+i3ashVPND1fRrp/DWzA9hWGN
 -----END PRIVATE KEY-----
 PRIVKEY
 
-my $signer = Crypt::OpenSSL::SignCSR->new($privkey);
+my $signer = Crypt::OpenSSL::SignCSR->new(
+                                    $privkey,
+                                    {
+                                        days    => 365,
+                                        format  => "pem",
+                                        digest  => "SHA512",
+                                    }
+                                    );
 
 isa_ok($signer, "Crypt::OpenSSL::SignCSR");
 
@@ -65,7 +72,7 @@ bczN2A==
 -----END CERTIFICATE REQUEST-----
 CERTREQUEST
 
-my $cert = $signer->sign($request, 10, 'SHA512', 0, '');
+my $cert = $signer->sign($request, '');
 
 my $certfile = tempfile();
 my ($certfh, $certfilename) = tempfile();
@@ -80,5 +87,17 @@ eval {
 
 like($result, qr/Issuer: C = CA, O = XML::Sig, OU = perl/, "Certificate - Issuer OK");
 like($result, qr/Signature Algorithm: sha512WithRSAEncryption/, "Certificate - Signature OK");
+
+ok($signer->get_days() eq 365, "Days were set successfully");
+ok($signer->set_days(36500), "Days set successfully");
+ok($signer->get_days() eq 36500, "Days were set successfully");
+
+like($signer->get_digest, qr/SHA512/, "Digest was correctly set"); 
+ok($signer->set_digest("SHA384"), "Digest set Succesfully");
+like($signer->get_digest, qr/SHA384/, "Digest was correctly set"); 
+
+like($signer->get_format(), qr/pem/, "Format was correctly set"); 
+ok($signer->set_format("text"), "Format set Succesfully");
+like($signer->get_format(), qr/text/, "Format was correctly set"); 
 
 done_testing

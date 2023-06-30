@@ -76,12 +76,13 @@ my %WriteMakefileArgs = (
   "NAME" => "Crypt::OpenSSL::SignCSR",
   "PREREQ_PM" => {},
   "TEST_REQUIRES" => {
+    "Crypt::OpenSSL::Guess" => 0,
     "Crypt::OpenSSL::PKCS10" => "0.19",
     "Crypt::OpenSSL::RSA" => 0,
     "File::Slurper" => "0.012",
     "File::Which" => 0
   },
-  "VERSION" => "0.04",
+  "VERSION" => "0.05",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -93,6 +94,7 @@ my %WriteMakefileArgs = (
 );
 
 my %FallbackPrereqs = (
+  "Crypt::OpenSSL::Guess" => 0,
   "Crypt::OpenSSL::PKCS10" => "0.19",
   "Crypt::OpenSSL::RSA" => 0,
   "File::Slurper" => "0.012",

@@ -31,10 +31,10 @@
 # define SERIAL_RAND_BITS 159
 
 BIO *bio_err;
-#if OPENSSL_API_COMPAT >= 30000
+#if OPENSSL_API_COMPAT >= 30101
 OSSL_LIB_CTX *libctx = NULL;
-#endif
 static const char *propq = NULL;
+#endif
 static unsigned long nmflag = 0;
 static char nmflag_set = 0;
 
@@ -77,14 +77,22 @@ int set_cert_times(X509 *x, const char *startdate, const char *enddate,
         if (X509_gmtime_adj(X509_getm_notBefore(x), 0) == NULL)
             return 0;
     } else {
+#if OPENSSL_API_COMPAT >= 10101
         if (!ASN1_TIME_set_string_X509(X509_getm_notBefore(x), startdate))
+#else
+        if (!ASN1_TIME_set_string(X509_getm_notBefore(x), startdate))
+#endif
             return 0;
     }
     if (enddate == NULL) {
         if (X509_time_adj_ex(X509_getm_notAfter(x), days, 0, NULL)
             == NULL)
             return 0;
+#if OPENSSL_API_COMPAT >= 10100
     } else if (!ASN1_TIME_set_string_X509(X509_getm_notAfter(x), enddate)) {
+#else
+    } else if (!ASN1_TIME_set_string(X509_getm_notAfter(x), enddate)) {
+#endif
         return 0;
     }
     return 1;
@@ -139,21 +147,21 @@ int cert_matches_key(const X509 *cert, const EVP_PKEY *pkey)
 
 static int do_x509_req_init(X509_REQ *x, STACK_OF(OPENSSL_STRING) *opts)
 {
-    int i;
+    //int i;
 
     opts = NULL;
     if (opts == NULL)
         return 1;
 
-    for (i = 0; i < sk_OPENSSL_STRING_num(opts); i++) {
-        char *opt = sk_OPENSSL_STRING_value(opts, i);
+    //for (i = 0; i < sk_OPENSSL_STRING_num(opts); i++) {
+    //    char *opt = sk_OPENSSL_STRING_value(opts, i);
 
-        //if (x509_req_ctrl_string(x, opt) <= 0) {
-        //   croak("parameter error "); //$, n", opt);
-        //   ERR_print_errors(bio_err);
-        //    return 0;
-        //}
-    }
+    //    if (x509_req_ctrl_string(x, opt) <= 0) {
+    //        croak("parameter error "); //$, n", opt);
+    //        ERR_print_errors(bio_err);
+    //        return 0;
+    //    }
+    //}
 
     return 1;
 }
@@ -167,10 +175,10 @@ int do_X509_REQ_verify(X509_REQ *x, EVP_PKEY *pkey, STACK_OF(OPENSSL_STRING) *vf
     int rv = 0;
 
     if (do_x509_req_init(x, vfyopts) > 0){
-#if OPENSSL_API_COMPAT <= 10100
-        rv = X509_REQ_verify(x, pkey);
-#else
+#if OPENSSL_API_COMPAT >= 30101
         rv = X509_REQ_verify_ex(x, pkey, libctx, propq);
+#else
+        rv = X509_REQ_verify(x, pkey);
 #endif
     }
     else
@@ -248,14 +256,14 @@ unsigned long get_nameopt(void)
         nmflag_set ? nmflag : XN_FLAG_SEP_CPLUS_SPC | ASN1_STRFLGS_UTF8_CONVERT;
 }
 
-#if OPENSSL_API_COMPAT >= 30000
+#if OPENSSL_API_COMPAT >= 30101
 static int do_sign_init(EVP_MD_CTX *ctx, EVP_PKEY *pkey, const char *md, STACK_OF(OPENSSL_STRING) *sigopts)
 #else
 static int do_sign_init(EVP_MD_CTX *ctx, EVP_PKEY *pkey, const EVP_MD *md, STACK_OF(OPENSSL_STRING) *sigopts)
 #endif
 {
     EVP_PKEY_CTX *pkctx = NULL;
-#if OPENSSL_API_COMPAT >= 30000
+#if OPENSSL_API_COMPAT >= 30101
     char def_md[80];
 #else
     int def_nid;
@@ -267,7 +275,7 @@ static int do_sign_init(EVP_MD_CTX *ctx, EVP_PKEY *pkey, const EVP_MD *md, STACK
      * EVP_PKEY_get_default_digest_name() returns 2 if the digest is mandatory
      * for this algorithm.
      */
-#if OPENSSL_API_COMPAT >= 30000
+#if OPENSSL_API_COMPAT >= 30101
     if (EVP_PKEY_get_default_digest_name(pkey, def_md, sizeof(def_md)) == 2
             && strcmp(def_md, "UNDEF") == 0) {
 #else
@@ -278,7 +286,7 @@ static int do_sign_init(EVP_MD_CTX *ctx, EVP_PKEY *pkey, const EVP_MD *md, STACK
         md = NULL;
     }
 
-#if OPENSSL_API_COMPAT >= 30000
+#if OPENSSL_API_COMPAT >= 30101
     int val = EVP_DigestSignInit_ex(ctx, &pkctx, md, libctx,
                                  propq, pkey, NULL);
 #else
@@ -318,6 +326,10 @@ SV * new(class, ...)
         char* keyString;
         BIO *bio;
         SV * key = newSV(0);
+        SV **svp;   // Temporary storage of options
+        SV *digest = NULL;
+        SV *format = newSVpv("pem", 3);
+        IV days = 365;
 
         if (items > 1) {
             if (ST(1) != NULL) {
@@ -330,6 +342,30 @@ SV * new(class, ...)
 
             if (items > 2)
                 options = ensure_hv(ST(2), "options");
+        }
+
+        // Get the number of days for specified - default 365
+        if (hv_exists(options, "days", strlen("days"))) {
+            svp = hv_fetch(options, "days", strlen("days"), 0);
+            if (SvIOKp(*svp)) {
+                days = SvIV(*svp);
+            }
+        }
+
+        // Get the digest format - default NULL uses the openssl default
+        if (hv_exists(options, "digest", strlen("digest"))) {
+            svp = hv_fetch(options, "digest", strlen("digest"), 0);
+            if (SvPOKp(*svp)) {
+                digest = *svp;
+            }
+        } // No defaut value - sign will use openssl default
+
+        // Get the output format - default is pem format
+        if (hv_exists(options, "format", strlen("format"))) {
+            svp = hv_fetch(options, "format", strlen("format"), 0);
+            if (SvPOKp(*svp)) {
+                format = *svp;
+            }
         }
 
         // Get the private key and save it in memory
@@ -349,13 +385,24 @@ SV * new(class, ...)
         // so it can be accessed later
         HV * attributes = newHV();
 
-        SV *const self = newRV_noinc( (SV *)attributes );
-
         sv_magicext(key, NULL, PERL_MAGIC_ext,
             &key_magic, (const char *)pkey, 0);
 
-        if((hv_store(attributes, "KEY", 3, key, 0)) == NULL)
-            croak("unable to init key store");
+        if((hv_store(attributes, "privkey", 7, key, 0)) == NULL)
+            croak("unable to init privkey store");
+
+        if (format != NULL)
+            if((hv_store(attributes, "format", 6, newRV_inc(format), 0)) == NULL)
+                croak("unable to init format store");
+
+        if (digest != NULL)
+            if((hv_store(attributes, "digest", 6, newRV_inc(digest), 0)) == NULL)
+                croak("unable to init digest store");
+
+        if((hv_store(attributes, "days", 4, newSViv(days), 0)) == NULL)
+            croak("unable to init days store");
+
+        SV *const self = newRV_noinc( (SV *)attributes );
 
         RETVAL = sv_bless( self, gv_stashpv( class, 0 ) );
 
@@ -363,18 +410,142 @@ SV * new(class, ...)
 
         RETVAL
 
-SV * sign(self, request_SV, days, name_SV, text, sigopts)
+char * get_digest(self)
+    HV * self;
+
+    CODE:
+        SV **svp;
+
+        // Get the output format - default is pem format
+        if (hv_exists(self, "digest", strlen("digest"))) {
+            svp = hv_fetch(self, "digest", strlen("digest"), 0);
+            if (SvROK(*svp)) {
+                RETVAL = SvPV_nolen(SvRV(*svp));
+            }
+        }
+        else {
+            //FIXME this should probably get the default for openssl
+            //but since nothing was set this is likely most accurate
+            RETVAL = SvPV_nolen(newSVpv("",0));
+        }
+
+    OUTPUT:
+
+        RETVAL
+
+IV set_digest(self, SV* digest)
+    HV * self;
+
+    CODE:
+        IV ret = 0;
+        char * digestname = NULL;
+        IV digestname_length;
+
+        RETVAL = 0;
+        // Get digestname parameter - verify that it is valid
+#if OPENSSL_API_COMPAT >= 30101
+        const EVP_MD *dgst;
+#else
+        EVP_MD * md = NULL;
+#endif
+        if (digest != NULL) {
+            digestname = (char*) SvPV(digest, digestname_length);
+            //printf("Digest Name: %s\n", digestname);
+            md = (EVP_MD *)EVP_get_digestbyname(digestname);
+        }
+
+        if (md != NULL)
+            if((hv_store(self, "digest", 6, newRV_inc(digest), 0)) == NULL)
+                RETVAL = 0;
+            else
+                RETVAL = 1;
+
+    OUTPUT:
+
+        RETVAL
+
+char * get_format(self)
+    HV * self;
+
+    CODE:
+        SV **svp;
+
+        // Get the output format - default is pem format
+        if (hv_exists(self, "format", strlen("format"))) {
+            svp = hv_fetch(self, "format", strlen("format"), 0);
+            if (SvROK(*svp)) {
+                RETVAL = SvPV_nolen(SvRV(*svp));
+            }
+        }
+        else {
+            RETVAL = SvPV_nolen(newSVpv("",0));
+        }
+
+    OUTPUT:
+
+        RETVAL
+
+IV set_format(self, SV* format)
+    HV * self;
+
+    CODE:
+        IV ret = 0;
+
+        if (sv_cmp(format, newSVpv("pem", 0)) == 0 ||
+                sv_cmp(format, newSVpv("text", 0)) == 0 )
+        {
+            if((hv_store(self, "format", 6, newRV_inc(format), 0)) == NULL)
+                RETVAL = 0;
+            else
+                RETVAL = 1;
+        } else {
+            RETVAL = ret;
+        }
+
+    OUTPUT:
+
+        RETVAL
+
+IV get_days(self)
+    HV * self;
+
+    CODE:
+        SV **svp;
+
+        // Get the number of days for specified - default 365
+        if (hv_exists(self, "days", strlen("days"))) {
+            svp = hv_fetch(self, "days", strlen("days"), 0);
+            if (SvIOKp(*svp)) {
+                RETVAL = SvIV(*svp);
+            }
+        }
+
+    OUTPUT:
+
+        RETVAL
+
+IV set_days(self, IV days)
+    HV * self;
+
+    CODE:
+        IV ret = 0;
+
+        if((hv_store(self, "days", 4, newSViv(days), 0)) == NULL)
+            RETVAL = 0;
+        else
+            RETVAL = 1;
+
+    OUTPUT:
+
+        RETVAL
+
+SV * sign(self, request_SV, sigopts)
     HV * self;
     SV * request_SV;
-    IV days;
-    SV * name_SV;
-    IV text;
 
     PREINIT:
-        char * req;
-        char *name;
         EVP_MD_CTX *mctx;
-        STACK_OF(OPENSSL_STRING) *sigopts;
+        STACK_OF(OPENSSL_STRING) *sigopts = NULL;
 
     CODE:
 
@@ -385,23 +556,45 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
         int rv = 0;
         STRLEN request_length;
         unsigned char* request;
-        //BIO *bio;
         BIO *csrbio;
-        BIO *finbio;
         char * digestname;
         STRLEN digestname_length;
+        IV days;
+        SV * digest = NULL;
+        SV * format;
 
-        // FIXME: This reads the key that was passed into the new
-        // function.  Its probably better to pass the key directly
-        // to the sign function so that we can avoid haing the key
-        // in memory too long.
-        if (!hv_exists(self, "KEY", strlen("KEY")))
-            croak("KEY not found in self!\n");
+        if (!hv_exists(self, "privkey", strlen("privkey")))
+            croak("privkey not found in self!\n");
 
-        svp = hv_fetch(self, "KEY", strlen("KEY"), 0);
+        svp = hv_fetch(self, "privkey", strlen("privkey"), 0);
 
         if (!SvMAGICAL(*svp) || (mg = mg_findext(*svp, PERL_MAGIC_ext, &key_magic)) == NULL)
-            croak("KEY is invalid");
+            croak("privkey is invalid");
+
+        if (!hv_exists(self, "days", strlen("days")))
+            croak("days not found in self!\n");
+
+        svp = hv_fetch(self, "days", strlen("days"), 0);
+        if (SvIOKp(*svp)) {
+            days = SvIV(*svp);
+        }
+
+        if (hv_exists(self, "digest", strlen("digest"))) {
+            svp = hv_fetch(self, "digest", strlen("digest"), 0);
+            if (SvROK(*svp)) {
+                digest = SvRV(*svp);
+            }
+        }
+
+        //printf("Digest: %s\n", (char *) SvPV_nolen(digest));
+
+        if (!hv_exists(self, "format", strlen("format")))
+            croak("format not found in self!\n");
+
+        svp = hv_fetch(self, "format", strlen("format"), 0);
+        if (SvROK(*svp)) {
+            format = SvRV(*svp);
+        }
 
         private_key = (EVP_PKEY *) mg->mg_ptr;
 
@@ -435,10 +628,10 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
 
         // Create a new certificate store
         X509 * x;
-#if OPENSSL_API_COMPAT <= 10100
-        if ((x = X509_new()) == NULL)
-#else
+#if OPENSSL_API_COMPAT >= 30101
         if ((x = X509_new_ex(libctx, propq)) == NULL)
+#else
+        if ((x = X509_new()) == NULL)
 #endif
             croak("X509_new_ex failed ...\n");
 
@@ -456,13 +649,13 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
             croak("X509_set_pubkey cannot set public key\n");
 
         // FIXME need to look at this
-        for (int i = X509_get_ext_count(x) - 1; i >= 0; i--) {
-            X509_EXTENSION *ex = X509_get_ext(x, i);
-            const char *sn = OBJ_nid2sn(OBJ_obj2nid(X509_EXTENSION_get_object(ex)));
+        //for (int i = X509_get_ext_count(x) - 1; i >= 0; i--) {
+        //    X509_EXTENSION *ex = X509_get_ext(x, i);
+        //    const char *sn = OBJ_nid2sn(OBJ_obj2nid(X509_EXTENSION_get_object(ex)));
 
-            //if (clrext || (ext_names != NULL && strstr(ext_names, sn) == NULL))
-            //    X509_EXTENSION_free(X509_delete_ext(x, i));
-        }
+        //    if (clrext || (ext_names != NULL && strstr(ext_names, sn) == NULL))
+        //        X509_EXTENSION_free(X509_delete_ext(x, i));
+        //}
 
         // FIXME - this may need to change to support signing by different certificates
         if (private_key != NULL && !cert_matches_key(x, private_key))
@@ -506,26 +699,30 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
             croak("X509_set_version cannot set version 3\n");
 
         // Get digestname parameter - verify that it is valid
-#if OPENSSL_API_COMPAT >= 30300
+#if OPENSSL_API_COMPAT >= 30101
         const EVP_MD *dgst;
 #else
-        EVP_MD * md;
+        EVP_MD * md = NULL;
 #endif
-        digestname = (unsigned char*) SvPV(name_SV, digestname_length);
-        md = (EVP_MD *)EVP_get_digestbyname(digestname);
+        if (digest != NULL) {
+            digestname = (unsigned char*) SvPV(digest, digestname_length);
+            //printf("Digest Name: %s\n", digestname);
+            md = (EVP_MD *)EVP_get_digestbyname(digestname);
+        }
         if (md != NULL)
-            digestname = digestname;
+            digestname = (char *) digestname;
         else
             digestname = NULL;
 
+        //printf ("DIGEST NAME = %s\n", digestname);
         // Allocate and a new digest context for certificate signing
         mctx = EVP_MD_CTX_new();
 
         // Sign the new certificate
-#if OPENSSL_API_COMPAT >= 30000
-        if (mctx != NULL && do_sign_init(mctx, private_key, digestname, NULL /*sigopts*/) > 0)
+#if OPENSSL_API_COMPAT >= 30101
+        if (mctx != NULL && do_sign_init(mctx, private_key, digestname, sigopts) > 0)
 #else
-        if (mctx != NULL && do_sign_init(mctx, private_key, md, NULL /*sigopts*/) > 0)
+        if (mctx != NULL && do_sign_init(mctx, private_key, md, sigopts) > 0)
 #endif
             rv = (X509_sign_ctx(x, mctx) > 0);
 
@@ -536,9 +733,9 @@ SV * sign(self, request_SV, days, name_SV, text, sigopts)
         BIO * out = BIO_new(BIO_s_mem());
 
         int i;
-        if (!text)
+        if (sv_cmp(format, newSVpv("pem", 0)) == 0){
             // Output the PEM encoded certificate
-            i = PEM_write_bio_X509(out, x);
+            i = PEM_write_bio_X509(out, x);}
         else
             // Output the text format of the certificate
             i = X509_print_ex(out, x, get_nameopt(), 0);

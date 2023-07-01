@@ -24,6 +24,8 @@ jobs:
       with:
         perl-version: ${{ matrix.perl }}
         distribution: strawberry
+    - name: perl -V
+      run: perl -V
     - name: Install Dependencies
       run: cpanm --installdeps .
     - name: Build Module

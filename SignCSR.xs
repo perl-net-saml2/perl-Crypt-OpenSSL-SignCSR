@@ -195,7 +195,7 @@ void croakSsl(char* p_file, int p_line)
     croak("%s:%d: OpenSSL error: %s", p_file, p_line, errorReason);
 }
 
-SV* extractBioString(BIO* p_stringBio)
+SV* extractBioString(pTHX_ BIO* p_stringBio)
 {
     SV* sv;
     BUF_MEM* bptr;
@@ -744,7 +744,7 @@ SV * sign(self, request_SV, sigopts)
         if (!i)
             croak("unable to output certificate data\n");
 
-        RETVAL = extractBioString(out);
+        RETVAL = extractBioString(aTHX_ out);
 
     OUTPUT:
 

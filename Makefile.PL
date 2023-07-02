@@ -15,24 +15,9 @@ my %args;
 
 my ($major, $minor, $patch) = openssl_version();
 print "Installed OpenSSL: $major.$minor.$patch\n";
-if ($^O ne 'MSWin32' and my $prefix = `brew --prefix --installed openssl\@1.1 2>@{[File::Spec->devnull]}`) {
-  chomp $prefix;
-  $args{INC} = "-I$prefix/include";
-  $args{LIBS} = ["-L$prefix/lib -lcrypto -lssl"];
-} else {
-  $args{INC} = '-I/usr/local/opt/openssl/include -I/usr/local/include/openssl -I/usr/include/openssl -I/usr/local/include/ssl -I/usr/local/ssl/include';
-  $args{LIBS} = ['-L/usr/local/opt/openssl/lib -L/usr/local/lib -L/usr/lib -L/usr/local/ssl/lib -lcrypto -lssl'];
-}
 
-if ($^O eq 'MSWin32') {
-  if (my $libs = `pkg-config --libs libcrypto 2>nul`) {
-    # strawberry perl has pkg-config
-    $args{LIBS} = [ $libs ];
-  } else {
-    $args{LIBS} = ['-llibeay32'] if $Config{cc} =~ /cl/; # msvc with ActivePerl
-    $args{LIBS} = ['-leay32']    if $Config{gccversion}; # gcc
-  }
-}
+$args{INC} =  openssl_inc_paths();
+$args{LIBS} = [openssl_lib_paths() . ' -lssl -lcrypto'];
 
 my $cc_option_flags = $major ge 3 ? ' -DOPENSSL_API_COMPAT=30000' : ' -DOPENSSL_API_COMPAT=10100';
 
@@ -43,7 +28,10 @@ if ($Config::Config{cc} =~ /gcc/i) {
 }
 
 if ($Config{gccversion} =~ /llvm/i) {
-  if ( $^O eq 'darwin' && $Config{gccversion} =~ /LLVM 12.0.5/) {
+  if ( $^O eq 'darwin' && (
+    $Config{gccversion} =~ /LLVM 1[2-9].\d.[5-9]/ ||
+    $Config{gccversion} =~ /LLVM 1[3-9]/ ))
+  {
     $cc_option_flags .= ' -Wno-deprecated-declarations -Wno-compound-token-split-by-macro';
   } else {
     $cc_option_flags .= ' -Wno-deprecated-declarations';
@@ -82,7 +70,7 @@ my %WriteMakefileArgs = (
     "File::Slurper" => "0.012",
     "File::Which" => 0
   },
-  "VERSION" => "0.05",
+  "VERSION" => "0.06",
   "test" => {
     "TESTS" => "t/*.t"
   }

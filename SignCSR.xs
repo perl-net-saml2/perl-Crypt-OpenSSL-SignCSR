@@ -88,7 +88,7 @@ int set_cert_times(X509 *x, const char *startdate, const char *enddate,
         if (X509_time_adj_ex(X509_getm_notAfter(x), days, 0, NULL)
             == NULL)
             return 0;
-#if OPENSSL_API_COMPAT >= 10100
+#if OPENSSL_API_COMPAT >= 10101
     } else if (!ASN1_TIME_set_string_X509(X509_getm_notAfter(x), enddate)) {
 #else
     } else if (!ASN1_TIME_set_string(X509_getm_notAfter(x), enddate)) {
@@ -195,7 +195,7 @@ void croakSsl(char* p_file, int p_line)
     croak("%s:%d: OpenSSL error: %s", p_file, p_line, errorReason);
 }
 
-SV* extractBioString(BIO* p_stringBio)
+SV* extractBioString(pTHX_ BIO* p_stringBio)
 {
     SV* sv;
     BUF_MEM* bptr;
@@ -437,9 +437,8 @@ IV set_digest(self, SV* digest)
     HV * self;
 
     CODE:
-        IV ret = 0;
-        char * digestname = NULL;
-        IV digestname_length;
+        const char * digestname = NULL;
+        STRLEN digestname_length;
 
         RETVAL = 0;
         // Get digestname parameter - verify that it is valid
@@ -449,16 +448,17 @@ IV set_digest(self, SV* digest)
         EVP_MD * md = NULL;
 #endif
         if (digest != NULL) {
-            digestname = (char*) SvPV(digest, digestname_length);
+            digestname = (const char*) SvPV(digest, digestname_length);
             //printf("Digest Name: %s\n", digestname);
             md = (EVP_MD *)EVP_get_digestbyname(digestname);
         }
 
-        if (md != NULL)
+        if (md != NULL) {
             if((hv_store(self, "digest", 6, newRV_inc(digest), 0)) == NULL)
                 RETVAL = 0;
             else
                 RETVAL = 1;
+        }
 
     OUTPUT:
 
@@ -528,7 +528,6 @@ IV set_days(self, IV days)
     HV * self;
 
     CODE:
-        IV ret = 0;
 
         if((hv_store(self, "days", 4, newSViv(days), 0)) == NULL)
             RETVAL = 0;
@@ -557,7 +556,7 @@ SV * sign(self, request_SV, sigopts)
         STRLEN request_length;
         unsigned char* request;
         BIO *csrbio;
-        char * digestname;
+        const char * digestname;
         STRLEN digestname_length;
         IV days;
         SV * digest = NULL;
@@ -577,6 +576,9 @@ SV * sign(self, request_SV, sigopts)
         svp = hv_fetch(self, "days", strlen("days"), 0);
         if (SvIOKp(*svp)) {
             days = SvIV(*svp);
+        }
+        else {
+            days = 365;
         }
 
         if (hv_exists(self, "digest", strlen("digest"))) {
@@ -705,12 +707,11 @@ SV * sign(self, request_SV, sigopts)
         EVP_MD * md = NULL;
 #endif
         if (digest != NULL) {
-            digestname = (unsigned char*) SvPV(digest, digestname_length);
-            //printf("Digest Name: %s\n", digestname);
+            digestname = (const char*) SvPV(digest, digestname_length);
             md = (EVP_MD *)EVP_get_digestbyname(digestname);
         }
         if (md != NULL)
-            digestname = (char *) digestname;
+            digestname = (const char *) digestname;
         else
             digestname = NULL;
 
@@ -743,7 +744,7 @@ SV * sign(self, request_SV, sigopts)
         if (!i)
             croak("unable to output certificate data\n");
 
-        RETVAL = extractBioString(out);
+        RETVAL = extractBioString(aTHX_ out);
 
     OUTPUT:
 

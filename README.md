@@ -126,7 +126,7 @@ I did not write any OpenSSL related code I simply copied and pasted
 the work of the OpenSSL project's openssl code until I arrived at a XS
 based module that could create a certificate from a Certificate Signing Request.
 
-&#x3d; head LICENSE
+# LICENSE
 
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

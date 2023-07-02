@@ -2,6 +2,20 @@ Revision history for Crypt-OpenSSL-SignCSR.
 
 {{$NEXT}}
 
+0.06 -- Sat Jul 01 21:09:19 ADT 2023
+
+    [Significant Changes since 0.05]
+
+    Fix some remaining issues with openssl versions and
+    a build issue on threaded perls which requires context
+
+    [Detailed Logs]
+
+    - ddfd2c2 Fix issue with threaded perl requiring context
+    - 9b57abd More changes to fix warnings and errors for mac and windows
+    - f063bee Increment version
+    - 24b5db6 (tag: 0.05) v0.05
+
 0.05 -- Fri Jun 30 17:26:04 ADT 2023
 
     [Significant Changes since 0.04]

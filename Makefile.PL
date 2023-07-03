@@ -56,6 +56,7 @@ my %WriteMakefileArgs = (
   "ABSTRACT" => "Sign a Certificate Signing Request in XS.",
   "AUTHOR" => "Timothy Legge <timlegge\@cpan.org>",
   "CONFIGURE_REQUIRES" => {
+    "Crypt::OpenSSL::Guess" => 0,
     "ExtUtils::MakeMaker" => 0
   },
   "DISTNAME" => "Crypt-OpenSSL-SignCSR",
@@ -64,7 +65,6 @@ my %WriteMakefileArgs = (
   "NAME" => "Crypt::OpenSSL::SignCSR",
   "PREREQ_PM" => {},
   "TEST_REQUIRES" => {
-    "Crypt::OpenSSL::Guess" => 0,
     "Crypt::OpenSSL::PKCS10" => "0.19",
     "Crypt::OpenSSL::RSA" => 0,
     "File::Slurper" => "0.012",
@@ -82,7 +82,6 @@ my %WriteMakefileArgs = (
 );
 
 my %FallbackPrereqs = (
-  "Crypt::OpenSSL::Guess" => 0,
   "Crypt::OpenSSL::PKCS10" => "0.19",
   "Crypt::OpenSSL::RSA" => 0,
   "File::Slurper" => "0.012",

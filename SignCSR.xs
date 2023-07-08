@@ -31,7 +31,7 @@
 # define SERIAL_RAND_BITS 159
 
 BIO *bio_err;
-#if OPENSSL_API_COMPAT >= 30101
+#if OPENSSL_API_COMPAT >= 30000
 OSSL_LIB_CTX *libctx = NULL;
 static const char *propq = NULL;
 #endif
@@ -55,7 +55,11 @@ int rand_serial(BIGNUM *b, ASN1_INTEGER *ai)
     if (btmp == NULL)
         return 0;
 
+#if OPENSSL_API_COMPAT < 10100
+    if (!BN_rand(btmp, SERIAL_RAND_BITS, 0, 0))
+#else
     if (!BN_rand(btmp, SERIAL_RAND_BITS, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY))
+#endif
         goto error;
     if (ai && !BN_to_ASN1_INTEGER(btmp, ai))
         goto error;
@@ -74,24 +78,32 @@ int set_cert_times(X509 *x, const char *startdate, const char *enddate,
                    int days)
 {
     if (startdate == NULL || strcmp(startdate, "today") == 0) {
+#if OPENSSL_API_COMPAT < 10100
+        if (X509_gmtime_adj(X509_get_notBefore(x), 0) == NULL)
+#else
         if (X509_gmtime_adj(X509_getm_notBefore(x), 0) == NULL)
+#endif
             return 0;
     } else {
-#if OPENSSL_API_COMPAT >= 10101
-        if (!ASN1_TIME_set_string_X509(X509_getm_notBefore(x), startdate))
+#if OPENSSL_API_COMPAT < 10101
+        if (!ASN1_TIME_set_string(X509_get_notBefore(x), startdate))
 #else
-        if (!ASN1_TIME_set_string(X509_getm_notBefore(x), startdate))
+        if (!ASN1_TIME_set_string_X509(X509_getm_notBefore(x), startdate))
 #endif
             return 0;
     }
     if (enddate == NULL) {
+#if OPENSSL_API_COMPAT < 10100
+        if (X509_time_adj_ex(X509_get_notAfter(x), days, 0, NULL)
+#else
         if (X509_time_adj_ex(X509_getm_notAfter(x), days, 0, NULL)
+#endif
             == NULL)
             return 0;
-#if OPENSSL_API_COMPAT >= 10101
-    } else if (!ASN1_TIME_set_string_X509(X509_getm_notAfter(x), enddate)) {
+#if OPENSSL_API_COMPAT < 10101
+    } else if (!ASN1_TIME_set_string(X509_get_notAfter(x), enddate)) {
 #else
-    } else if (!ASN1_TIME_set_string(X509_getm_notAfter(x), enddate)) {
+    } else if (!ASN1_TIME_set_string_X509(X509_getm_notAfter(x), enddate)) {
 #endif
         return 0;
     }
@@ -140,7 +152,7 @@ int cert_matches_key(const X509 *cert, const EVP_PKEY *pkey)
     int match;
 
     ERR_set_mark();
-    match = X509_check_private_key(cert, pkey);
+    match = X509_check_private_key((X509 *) cert, (EVP_PKEY *) pkey);
     ERR_pop_to_mark();
     return match;
 }
@@ -175,7 +187,7 @@ int do_X509_REQ_verify(X509_REQ *x, EVP_PKEY *pkey, STACK_OF(OPENSSL_STRING) *vf
     int rv = 0;
 
     if (do_x509_req_init(x, vfyopts) > 0){
-#if OPENSSL_API_COMPAT >= 30101
+#if OPENSSL_API_COMPAT >= 30000
         rv = X509_REQ_verify_ex(x, pkey, libctx, propq);
 #else
         rv = X509_REQ_verify(x, pkey);
@@ -449,7 +461,7 @@ IV set_digest(self, SV* digest)
 #endif
         if (digest != NULL) {
             digestname = (const char*) SvPV(digest, digestname_length);
-            //printf("Digest Name: %s\n", digestname);
+            // printf("Digest Name: %s\n", digestname);
             md = (EVP_MD *)EVP_get_digestbyname(digestname);
         }
 
@@ -458,7 +470,9 @@ IV set_digest(self, SV* digest)
                 RETVAL = 0;
             else
                 RETVAL = 1;
-        }
+        } else {
+	    //printf("Can't change digets to %s\n", digestname);
+	}
 
     OUTPUT:
 
@@ -617,13 +631,19 @@ SV * sign(self, request_SV, sigopts)
         // Verify the CSR is properly signed
         EVP_PKEY *pkey;
         if (csr != NULL) {
+#if OPENSSL_API_COMPAT < 10100
+            pkey = X509_REQ_get_pubkey(csr);
+#else
             pkey = X509_REQ_get0_pubkey(csr);
+#endif
+            if (pkey == NULL)
+                croak ("Warning: unable to get public key from CSR\n");
 
             int ret = do_X509_REQ_verify(csr, pkey, NULL);
-            if (pkey == NULL || ret < 0)
-                croak ("Warning: error while verifying CSR self-signature\n");
             if (ret == 0)
                 croak ("Verification of CSR failed\n");
+	    if ( ret < 0)
+                croak ("Warning: error while verifying CSR self-signature\n");
         }
         else
             croak("Unable to properly parse the Certificate Signing Request\n");
@@ -647,7 +667,11 @@ SV * sign(self, request_SV, sigopts)
             croak("X509_set_subject_name cannot set subject name\n");
 
         // Update the certificate with the CSR's public key
+#if OPENSSL_API_COMPAT < 10100
+        if (!X509_set_pubkey(x, X509_REQ_get_pubkey(csr)))
+#else
         if (!X509_set_pubkey(x, X509_REQ_get0_pubkey(csr)))
+#endif
             croak("X509_set_pubkey cannot set public key\n");
 
         // FIXME need to look at this
@@ -688,8 +712,10 @@ SV * sign(self, request_SV, sigopts)
         X509V3_set_ctx(&ext_ctx, issuer_cert, x, NULL, NULL, X509V3_CTX_REPLACE);
         if (!X509V3_set_issuer_pkey(&ext_ctx, private_key))
             croak("X509V3_set_issuer_pkey cannot set issuer private key\n");
-#else
+#elseif OPENSSL_API_COMPAT >=10010
         X509V3_set_ctx(&ext_ctx, issuer_cert, x, csr, NULL, X509V3_CTX_REPLACE);
+#else
+        X509V3_set_ctx(&ext_ctx, issuer_cert, x, csr, NULL, 0);
 #endif
 
         // Set the X509 version of the certificate
@@ -712,12 +738,17 @@ SV * sign(self, request_SV, sigopts)
         }
         if (md != NULL)
             digestname = (const char *) digestname;
-        else
-            digestname = NULL;
-
+        else {
+           digestname = NULL;
+	  printf("Failed to set the digest md = Null\n");
+	}
         //printf ("DIGEST NAME = %s\n", digestname);
         // Allocate and a new digest context for certificate signing
+#if OPENSSL_API_COMPAT >= 10100
         mctx = EVP_MD_CTX_new();
+#else
+        mctx = EVP_MD_CTX_create();
+#endif
 
         // Sign the new certificate
 #if OPENSSL_API_COMPAT >= 30101

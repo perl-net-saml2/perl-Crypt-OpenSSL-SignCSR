@@ -2,7 +2,19 @@ Revision history for Crypt-OpenSSL-SignCSR.
 
 {{$NEXT}}
 
+0.08 -- Fri Jul 07 23:58:11 ADT 2023
+
+    - a6dc051 Fix up a few older openssl issues
+    - 2e233f8 Increment repo versioni - in Makefile.PLwq
+    - ee4d8c9 Increment repo version
+    - 1676f26 (tag: 0.07) v0.07
+
 0.07 -- Sun Jul 02 22:05:17 ADT 2023
+
+    - 344b594 Some packaging fixes
+    - 32fe761 Fix a pod issue and increment repo version
+    - 40c37df (tag: 0.06) v0.06
+
 
 0.06 -- Sat Jul 01 21:09:19 ADT 2023
 

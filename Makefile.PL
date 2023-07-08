@@ -70,7 +70,7 @@ my %WriteMakefileArgs = (
     "File::Slurper" => "0.012",
     "File::Which" => 0
   },
-  "VERSION" => "0.08",
+  "VERSION" => "0.09",
   "test" => {
     "TESTS" => "t/*.t"
   }

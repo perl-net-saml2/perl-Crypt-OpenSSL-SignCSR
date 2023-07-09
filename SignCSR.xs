@@ -55,7 +55,7 @@ int rand_serial(BIGNUM *b, ASN1_INTEGER *ai)
     if (btmp == NULL)
         return 0;
 
-#if OPENSSL_API_COMPAT < 10100
+#if OPENSSL_API_COMPAT <= 10100
     if (!BN_rand(btmp, SERIAL_RAND_BITS, 0, 0))
 #else
     if (!BN_rand(btmp, SERIAL_RAND_BITS, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY))
@@ -78,14 +78,14 @@ int set_cert_times(X509 *x, const char *startdate, const char *enddate,
                    int days)
 {
     if (startdate == NULL || strcmp(startdate, "today") == 0) {
-#if OPENSSL_API_COMPAT < 10100
+#if OPENSSL_API_COMPAT <= 10100
         if (X509_gmtime_adj(X509_get_notBefore(x), 0) == NULL)
 #else
         if (X509_gmtime_adj(X509_getm_notBefore(x), 0) == NULL)
 #endif
             return 0;
     } else {
-#if OPENSSL_API_COMPAT < 10101
+#if OPENSSL_API_COMPAT <= 10101
         if (!ASN1_TIME_set_string(X509_get_notBefore(x), startdate))
 #else
         if (!ASN1_TIME_set_string_X509(X509_getm_notBefore(x), startdate))
@@ -93,7 +93,7 @@ int set_cert_times(X509 *x, const char *startdate, const char *enddate,
             return 0;
     }
     if (enddate == NULL) {
-#if OPENSSL_API_COMPAT < 10100
+#if OPENSSL_API_COMPAT <= 10100
         if (X509_time_adj_ex(X509_get_notAfter(x), days, 0, NULL)
 #else
         if (X509_time_adj_ex(X509_getm_notAfter(x), days, 0, NULL)
@@ -631,7 +631,7 @@ SV * sign(self, request_SV, sigopts)
         // Verify the CSR is properly signed
         EVP_PKEY *pkey;
         if (csr != NULL) {
-#if OPENSSL_API_COMPAT < 10100
+#if OPENSSL_API_COMPAT <= 10100
             pkey = X509_REQ_get_pubkey(csr);
 #else
             pkey = X509_REQ_get0_pubkey(csr);
@@ -667,7 +667,7 @@ SV * sign(self, request_SV, sigopts)
             croak("X509_set_subject_name cannot set subject name\n");
 
         // Update the certificate with the CSR's public key
-#if OPENSSL_API_COMPAT < 10100
+#if OPENSSL_API_COMPAT <= 10100
         if (!X509_set_pubkey(x, X509_REQ_get_pubkey(csr)))
 #else
         if (!X509_set_pubkey(x, X509_REQ_get0_pubkey(csr)))
@@ -744,10 +744,10 @@ SV * sign(self, request_SV, sigopts)
 	}
         //printf ("DIGEST NAME = %s\n", digestname);
         // Allocate and a new digest context for certificate signing
-#if OPENSSL_API_COMPAT >= 10100
-        mctx = EVP_MD_CTX_new();
-#else
+#if OPENSSL_API_COMPAT <= 10100
         mctx = EVP_MD_CTX_create();
+#else
+        mctx = EVP_MD_CTX_new();
 #endif
 
         // Sign the new certificate

@@ -2,6 +2,12 @@ Revision history for Crypt-OpenSSL-SignCSR.
 
 {{$NEXT}}
 
+0.10 -- Sat Jul 08 21:24:27 ADT 2023
+
+    - 7272fa3 Increment the version for a release
+    - 4b10acc Include all of 1.1 Openssl releases in older functions
+    - b9d2ae4 v0.09
+
 0.09 -- Sat Jul 08 15:26:53 ADT 2023
 
     [ Release 0.08 as production]

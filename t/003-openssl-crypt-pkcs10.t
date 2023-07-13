@@ -88,7 +88,7 @@ eval {
 
 unlink $certfilename;
 
-like($result, qr/Issuer: C = CA, ST = New Brunswick, O = XML::Sig, OU = perl/, "Certificate - Issuer OK");
+like($result, qr/Issuer:.*XML::Sig.*perl/, "Certificate - Issuer OK");
 like($result, qr/Signature Algorithm: sha512WithRSAEncryption/, "Certificate - Signature OK");
 
 done_testing

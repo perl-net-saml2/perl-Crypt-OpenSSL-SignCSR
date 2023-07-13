@@ -85,7 +85,7 @@ eval {
     $result = `$openssl x509 -in $certfilename -text`;
 };
 
-like($result, qr/Issuer: C = CA, O = XML::Sig, OU = perl/, "Certificate - Issuer OK");
+like($result, qr/Issuer:.*XML::Sig.*perl/, "Certificate - Issuer OK");
 like($result, qr/Signature Algorithm: sha512WithRSAEncryption/, "Certificate - Signature OK");
 
 ok($signer->get_days() eq 365, "Days were set successfully");

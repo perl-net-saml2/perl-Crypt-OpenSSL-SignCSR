@@ -72,7 +72,7 @@ bczN2A==
 -----END CERTIFICATE REQUEST-----
 CERTREQUEST
 
-my $cert = $signer->sign($request, '');
+my $cert = $signer->sign($request);
 
 my $certfile = tempfile();
 my ($certfh, $certfilename) = tempfile();

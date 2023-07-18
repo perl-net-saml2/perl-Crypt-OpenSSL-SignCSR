@@ -72,7 +72,7 @@ my $signer = Crypt::OpenSSL::SignCSR->new(
 
 isa_ok($signer, "Crypt::OpenSSL::SignCSR");
 
-my $cert = $signer->sign($request, '');
+my $cert = $signer->sign($request);
 
 my $certfile = tempfile();
 my ($certfh, $certfilename) = tempfile();

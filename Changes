@@ -2,6 +2,14 @@ Revision history for Crypt-OpenSSL-SignCSR.
 
 {{$NEXT}}
 
+0.11 -- Tue Jul 18 19:27:54 ADT 2023
+
+    - daa5dd9 Increment version for release
+    - 3a09798 Remove undocumented sigopts from sign()
+    - 4295e6b Better regex for more openssl versions
+    - a32ff18 Find out the version of OpenSSL
+    - 2a21fa4 v0.10
+
 0.10 -- Sat Jul 08 21:24:27 ADT 2023
 
     - 7272fa3 Increment the version for a release

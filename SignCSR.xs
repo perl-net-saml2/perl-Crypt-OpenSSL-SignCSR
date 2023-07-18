@@ -552,13 +552,12 @@ IV set_days(self, IV days)
 
         RETVAL
 
-SV * sign(self, request_SV, sigopts)
+SV * sign(self, request_SV)
     HV * self;
     SV * request_SV;
 
     PREINIT:
         EVP_MD_CTX *mctx;
-        STACK_OF(OPENSSL_STRING) *sigopts = NULL;
 
     CODE:
 
@@ -752,9 +751,9 @@ SV * sign(self, request_SV, sigopts)
 
         // Sign the new certificate
 #if OPENSSL_API_COMPAT >= 30101
-        if (mctx != NULL && do_sign_init(mctx, private_key, digestname, sigopts) > 0)
+        if (mctx != NULL && do_sign_init(mctx, private_key, digestname, NULL) > 0)
 #else
-        if (mctx != NULL && do_sign_init(mctx, private_key, md, sigopts) > 0)
+        if (mctx != NULL && do_sign_init(mctx, private_key, md, NULL) > 0)
 #endif
             rv = (X509_sign_ctx(x, mctx) > 0);
 

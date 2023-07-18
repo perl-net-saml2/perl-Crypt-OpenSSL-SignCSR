@@ -15,14 +15,14 @@ my $signer = Crypt::OpenSSL::SignCSR->new(
                                   format  => $format, # Output format "text" or "pem" (default)
                               });
 my $cert   = $signer->sign(
-                              $request, # CRS in PEM format
+                              $request, # CSR in PEM format
                           );
 
 my $ret = $signer->set_days(3650);
 my $ret = $signer->set_format("text");
 my $ret = $signer->set_days("SHA512");
 
-$cert   = $signer->sign( $request ); # CRS in PEM format
+$cert   = $signer->sign( $request ); # CSR in PEM format
 ```
 
 # DESCRIPTION

@@ -480,8 +480,8 @@ IV set_digest(self, SV* digest)
             else
                 RETVAL = 1;
         } else {
-	    //printf("Can't change digets to %s\n", digestname);
-	}
+        //printf("Can't change digets to %s\n", digestname);
+    }
 
     OUTPUT:
 
@@ -650,7 +650,7 @@ SV * sign(self, request_SV)
             int ret = do_X509_REQ_verify(csr, pkey, NULL);
             if (ret == 0)
                 croak ("Verification of CSR failed\n");
-	    if ( ret < 0)
+            if ( ret < 0)
                 croak ("Warning: error while verifying CSR self-signature\n");
         }
         else
@@ -747,9 +747,9 @@ SV * sign(self, request_SV)
         if (md != NULL)
             digestname = (const char *) digestname;
         else {
-           digestname = NULL;
-	  printf("Failed to set the digest md = Null\n");
-	}
+            digestname = NULL;
+            printf("Failed to set the digest md = Null\n");
+        }
         //printf ("DIGEST NAME = %s\n", digestname);
         // Allocate and a new digest context for certificate signing
 #if OPENSSL_API_COMPAT <= 10100

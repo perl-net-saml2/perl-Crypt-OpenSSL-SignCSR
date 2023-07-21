@@ -322,7 +322,16 @@ static int key_destroy(pTHX_ SV* var, MAGIC* magic) {
 static const MGVTBL key_magic = { NULL, NULL, NULL, NULL, key_destroy };
 
 
-MODULE = Crypt::OpenSSL::SignCSR		PACKAGE = Crypt::OpenSSL::SignCSR
+MODULE = Crypt::OpenSSL::SignCSR    PACKAGE = Crypt::OpenSSL::SignCSR    PREFIX = signcsr_
+
+BOOT:
+    ERR_load_crypto_strings();
+#if OPENSSL_API_COMPAT <= 10100
+    ERR_load_ERR_strings();
+    OpenSSL_add_all_algorithms();
+    OpenSSL_add_all_ciphers();
+    OpenSSL_add_all_digests();
+#endif
 
 PROTOTYPES: DISABLE
 
@@ -471,8 +480,8 @@ IV set_digest(self, SV* digest)
             else
                 RETVAL = 1;
         } else {
-	    //printf("Can't change digets to %s\n", digestname);
-	}
+        //printf("Can't change digets to %s\n", digestname);
+    }
 
     OUTPUT:
 
@@ -641,7 +650,7 @@ SV * sign(self, request_SV)
             int ret = do_X509_REQ_verify(csr, pkey, NULL);
             if (ret == 0)
                 croak ("Verification of CSR failed\n");
-	    if ( ret < 0)
+            if ( ret < 0)
                 croak ("Warning: error while verifying CSR self-signature\n");
         }
         else
@@ -738,9 +747,9 @@ SV * sign(self, request_SV)
         if (md != NULL)
             digestname = (const char *) digestname;
         else {
-           digestname = NULL;
-	  printf("Failed to set the digest md = Null\n");
-	}
+            digestname = NULL;
+            printf("Failed to set the digest md = Null\n");
+        }
         //printf ("DIGEST NAME = %s\n", digestname);
         // Allocate and a new digest context for certificate signing
 #if OPENSSL_API_COMPAT <= 10100
@@ -779,4 +788,22 @@ SV * sign(self, request_SV)
     OUTPUT:
 
         RETVAL
+
+#if OPENSSL_API_COMPAT > 10200
+void signcsr_DESTROY(void)
+
+    CODE:
+        /* deinitialisation is done automatically */
+
+#else
+void signcsr_DESTROY(void)
+
+    CODE:
+
+        CRYPTO_cleanup_all_ex_data();
+        ERR_free_strings();
+        ERR_remove_state(0);
+        EVP_cleanup();
+
+#endif
 

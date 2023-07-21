@@ -322,7 +322,16 @@ static int key_destroy(pTHX_ SV* var, MAGIC* magic) {
 static const MGVTBL key_magic = { NULL, NULL, NULL, NULL, key_destroy };
 
 
-MODULE = Crypt::OpenSSL::SignCSR		PACKAGE = Crypt::OpenSSL::SignCSR
+MODULE = Crypt::OpenSSL::SignCSR    PACKAGE = Crypt::OpenSSL::SignCSR    PREFIX = signcsr_
+
+BOOT:
+    ERR_load_crypto_strings();
+#if OPENSSL_API_COMPAT <= 10100
+    ERR_load_ERR_strings();
+    OpenSSL_add_all_algorithms();
+    OpenSSL_add_all_ciphers();
+    OpenSSL_add_all_digests();
+#endif
 
 PROTOTYPES: DISABLE
 
@@ -779,4 +788,22 @@ SV * sign(self, request_SV)
     OUTPUT:
 
         RETVAL
+
+#if OPENSSL_API_COMPAT > 10200
+void signcsr_DESTROY(void)
+
+    CODE:
+        /* deinitialisation is done automatically */
+
+#else
+void signcsr_DESTROY(void)
+
+    CODE:
+
+        CRYPTO_cleanup_all_ex_data();
+        ERR_free_strings();
+        ERR_remove_state(0);
+        EVP_cleanup();
+
+#endif
 

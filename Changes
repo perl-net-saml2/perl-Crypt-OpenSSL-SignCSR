@@ -2,6 +2,14 @@ Revision history for Crypt-OpenSSL-SignCSR.
 
 {{$NEXT}}
 
+0.12 -- Thu Jul 20 23:41:31 ADT 2023
+
+    - 150a974 Increment version for release
+    - 61978d5 Fix incorrect case for PERL_VERSION
+    - 9f7fafe Change tabs to spaces - no code changes
+    - 10d3a65 Fix issue with more openssl versions
+    - 9eccdd7 (tag: 0.11, origin/main) v0.11
+
 0.11 -- Tue Jul 18 19:27:54 ADT 2023
 
     - daa5dd9 Increment version for release

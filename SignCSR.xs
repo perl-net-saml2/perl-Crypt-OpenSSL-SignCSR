@@ -85,7 +85,7 @@ int set_cert_times(X509 *x, const char *startdate, const char *enddate,
 #endif
             return 0;
     } else {
-#if OPENSSL_API_COMPAT <= 10101
+#if OPENSSL_API_COMPAT <= 11000
         if (!ASN1_TIME_set_string(X509_get_notBefore(x), startdate))
 #else
         if (!ASN1_TIME_set_string_X509(X509_getm_notBefore(x), startdate))
@@ -100,7 +100,7 @@ int set_cert_times(X509 *x, const char *startdate, const char *enddate,
 #endif
             == NULL)
             return 0;
-#if OPENSSL_API_COMPAT < 10101
+#if OPENSSL_API_COMPAT <= 11000
     } else if (!ASN1_TIME_set_string(X509_get_notAfter(x), enddate)) {
 #else
     } else if (!ASN1_TIME_set_string_X509(X509_getm_notAfter(x), enddate)) {
@@ -437,17 +437,14 @@ char * get_digest(self)
     CODE:
         SV **svp;
 
+        RETVAL = SvPV_nolen(newSVpv("",0));
+
         // Get the output format - default is pem format
         if (hv_exists(self, "digest", strlen("digest"))) {
             svp = hv_fetch(self, "digest", strlen("digest"), 0);
             if (SvROK(*svp)) {
                 RETVAL = SvPV_nolen(SvRV(*svp));
             }
-        }
-        else {
-            //FIXME this should probably get the default for openssl
-            //but since nothing was set this is likely most accurate
-            RETVAL = SvPV_nolen(newSVpv("",0));
         }
 
     OUTPUT:
@@ -493,15 +490,14 @@ char * get_format(self)
     CODE:
         SV **svp;
 
+        RETVAL = SvPV_nolen(newSVpv("",0));
+
         // Get the output format - default is pem format
         if (hv_exists(self, "format", strlen("format"))) {
             svp = hv_fetch(self, "format", strlen("format"), 0);
             if (SvROK(*svp)) {
                 RETVAL = SvPV_nolen(SvRV(*svp));
             }
-        }
-        else {
-            RETVAL = SvPV_nolen(newSVpv("",0));
         }
 
     OUTPUT:
@@ -512,7 +508,7 @@ IV set_format(self, SV* format)
     HV * self;
 
     CODE:
-        IV ret = 0;
+        RETVAL = 0;
 
         if (sv_cmp(format, newSVpv("pem", 0)) == 0 ||
                 sv_cmp(format, newSVpv("text", 0)) == 0 )
@@ -522,7 +518,7 @@ IV set_format(self, SV* format)
             else
                 RETVAL = 1;
         } else {
-            RETVAL = ret;
+            RETVAL = 0;
         }
 
     OUTPUT:
@@ -535,6 +531,7 @@ IV get_days(self)
     CODE:
         SV **svp;
 
+        RETVAL = -1;
         // Get the number of days for specified - default 365
         if (hv_exists(self, "days", strlen("days"))) {
             svp = hv_fetch(self, "days", strlen("days"), 0);
@@ -551,6 +548,7 @@ IV set_days(self, IV days)
     HV * self;
 
     CODE:
+        RETVAL = 0;
 
         if((hv_store(self, "days", 4, newSViv(days), 0)) == NULL)
             RETVAL = 0;
@@ -582,7 +580,7 @@ SV * sign(self, request_SV)
         STRLEN digestname_length;
         IV days;
         SV * digest = NULL;
-        SV * format;
+        SV * format = NULL;
 
         if (!hv_exists(self, "privkey", strlen("privkey")))
             croak("privkey not found in self!\n");
@@ -802,7 +800,9 @@ void signcsr_DESTROY(void)
 
         CRYPTO_cleanup_all_ex_data();
         ERR_free_strings();
+#if OPENSSL_API_COMPAT < 10000
         ERR_remove_state(0);
+#endif
         EVP_cleanup();
 
 #endif

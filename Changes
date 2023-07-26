@@ -2,6 +2,14 @@ Revision history for Crypt-OpenSSL-SignCSR.
 
 {{$NEXT}}
 
+0.13 -- Tue Jul 25 23:43:27 ADT 2023
+
+    - 63caf53 fix linux github actions
+    - e6ce8ba A few more openssl differences and compiler issues
+    - cfd7e85 Point to correct repo
+    - f48933d use Crypt::OpenSSL:ConfiguredAPI to get the set API level
+    - 0aa73aa v0.12
+
 0.12 -- Thu Jul 20 23:41:31 ADT 2023
 
     - 150a974 Increment version for release

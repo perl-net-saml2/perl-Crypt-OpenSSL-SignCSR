@@ -103,7 +103,7 @@ Arguments:
 
 Get the number of days that is currently set.
 
-Returns a number
+Returns the number of days or -1 for a failure.
 
 # EXPORT
 

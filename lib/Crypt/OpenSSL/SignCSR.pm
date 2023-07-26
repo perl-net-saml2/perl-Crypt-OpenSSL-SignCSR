@@ -7,7 +7,7 @@ use warnings;
 
 require Exporter;
 
-our $VERSION  = "0.12";
+our $VERSION  = "0.13";
 
 our @ISA = qw(Exporter);
 
@@ -122,7 +122,7 @@ Arguments:
 
 Get the number of days that is currently set.
 
-Returns a number
+Returns the number of days or -1 for a failure.
 
 =head1 EXPORT
 

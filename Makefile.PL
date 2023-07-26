@@ -11,15 +11,24 @@ use ExtUtils::MakeMaker;
 use Config;
 use File::Spec;
 use Crypt::OpenSSL::Guess;
+use Crypt::OpenSSL::ConfiguredAPI;
+
 my %args;
 
 my ($major, $minor, $patch) = openssl_version();
 print "Installed OpenSSL: $major.$minor.$patch\n";
 
+my $version = ($major * 10000) + ($minor * 100);
+my $api = Crypt::OpenSSL::ConfiguredAPI::get_configured_api();
+print "API version read $api\n";
+
+my $compat = $api ne 0 ? $api : $version;
+print "OPENSSL_COMPAT_API set to: $compat\n";
+
 $args{INC} =  openssl_inc_paths();
 $args{LIBS} = [openssl_lib_paths() . ' -lssl -lcrypto'];
 
-my $cc_option_flags = $major ge 3 ? ' -DOPENSSL_API_COMPAT=30000' : ' -DOPENSSL_API_COMPAT=10100';
+my $cc_option_flags = " -DOPENSSL_API_COMPAT=$compat";
 
 if ($Config::Config{cc} =~ /gcc/i) {
   $cc_option_flags .= $ENV{AUTHOR_TESTING} ? ' -Wall -Werror' : ' -Wall';
@@ -55,7 +64,12 @@ if ($Config{myuname} =~ /sunos|solaris/i) {
 my %WriteMakefileArgs = (
   "ABSTRACT" => "Sign a Certificate Signing Request in XS.",
   "AUTHOR" => "Timothy Legge <timlegge\@cpan.org>",
+  "BUILD_REQUIRES" => {
+    "Crypt::OpenSSL::ConfiguredAPI" => 0,
+    "Crypt::OpenSSL::Guess" => 0
+  },
   "CONFIGURE_REQUIRES" => {
+    "Crypt::OpenSSL::ConfiguredAPI" => 0,
     "Crypt::OpenSSL::Guess" => 0,
     "ExtUtils::MakeMaker" => 0
   },
@@ -63,14 +77,20 @@ my %WriteMakefileArgs = (
   "LICENSE" => "apache",
   "MIN_PERL_VERSION" => "5.014",
   "NAME" => "Crypt::OpenSSL::SignCSR",
-  "PREREQ_PM" => {},
+  "PREREQ_PM" => {
+    "Exporter" => 0,
+    "XSLoader" => 0
+  },
   "TEST_REQUIRES" => {
+    "Crypt::OpenSSL::Guess" => 0,
     "Crypt::OpenSSL::PKCS10" => "0.19",
     "Crypt::OpenSSL::RSA" => 0,
     "File::Slurper" => "0.012",
-    "File::Which" => 0
+    "File::Temp" => 0,
+    "File::Which" => 0,
+    "Test::More" => "0.88"
   },
-  "VERSION" => "0.12",
+  "VERSION" => "0.13",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -82,10 +102,16 @@ my %WriteMakefileArgs = (
 );
 
 my %FallbackPrereqs = (
+  "Crypt::OpenSSL::ConfiguredAPI" => 0,
+  "Crypt::OpenSSL::Guess" => 0,
   "Crypt::OpenSSL::PKCS10" => "0.19",
   "Crypt::OpenSSL::RSA" => 0,
+  "Exporter" => 0,
   "File::Slurper" => "0.012",
-  "File::Which" => 0
+  "File::Temp" => 0,
+  "File::Which" => 0,
+  "Test::More" => "0.88",
+  "XSLoader" => 0
 );
 
 unless ( eval { ExtUtils::MakeMaker->VERSION('6.63_03') } ) {

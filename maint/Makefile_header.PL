@@ -1,15 +1,24 @@
 use Config;
 use File::Spec;
 use Crypt::OpenSSL::Guess;
+use Crypt::OpenSSL::ConfiguredAPI;
+
 my %args;
 
 my ($major, $minor, $patch) = openssl_version();
 print "Installed OpenSSL: $major.$minor.$patch\n";
 
+my $version = ($major * 10000) + ($minor * 100);
+my $api = Crypt::OpenSSL::ConfiguredAPI::get_configured_api();
+print "API version read $api\n";
+
+my $compat = $api ne 0 ? $api : $version;
+print "OPENSSL_COMPAT_API set to: $compat\n";
+
 $args{INC} =  openssl_inc_paths();
 $args{LIBS} = [openssl_lib_paths() . ' -lssl -lcrypto'];
 
-my $cc_option_flags = $major ge 3 ? ' -DOPENSSL_API_COMPAT=30000' : ' -DOPENSSL_API_COMPAT=10100';
+my $cc_option_flags = " -DOPENSSL_API_COMPAT=$compat";
 
 if ($Config::Config{cc} =~ /gcc/i) {
   $cc_option_flags .= $ENV{AUTHOR_TESTING} ? ' -Wall -Werror' : ' -Wall';

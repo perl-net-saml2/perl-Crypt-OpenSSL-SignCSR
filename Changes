@@ -2,6 +2,11 @@ Revision history for Crypt-OpenSSL-SignCSR.
 
 {{$NEXT}}
 
+0.14 -- Wed Jul 26 21:53:12 ADT 2023
+
+    - 46298e7 Support openbsd's LibreSSL
+    - f782397 v0.13
+
 0.13 -- Tue Jul 25 23:43:27 ADT 2023
 
     - 63caf53 fix linux github actions

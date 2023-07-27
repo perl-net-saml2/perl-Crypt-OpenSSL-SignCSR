@@ -22,6 +22,15 @@ my $version = ($major * 10000) + ($minor * 100);
 my $api = Crypt::OpenSSL::ConfiguredAPI::get_configured_api();
 print "API version read $api\n";
 
+if (!$api) {
+    my $prefix = find_openssl_prefix();
+    my $exec = find_openssl_exec($prefix);
+    if (`$exec version` =~ m/LibreSSL/){
+        $api = 10100;
+        print "LibreSSL detected setting api to 10100\n";
+    }
+}
+
 my $compat = $api ne 0 ? $api : $version;
 print "OPENSSL_COMPAT_API set to: $compat\n";
 
@@ -90,7 +99,7 @@ my %WriteMakefileArgs = (
     "File::Which" => 0,
     "Test::More" => "0.88"
   },
-  "VERSION" => "0.13",
+  "VERSION" => "0.14",
   "test" => {
     "TESTS" => "t/*.t"
   }
